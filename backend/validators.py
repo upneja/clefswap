@@ -2,7 +2,8 @@ import os
 from backend.clef_map import CLEF_MAP
 
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
-ALLOWED_EXTENSIONS = {'.mxl', '.musicxml', '.xml'}
+ALLOWED_EXTENSIONS = {'.mxl', '.musicxml', '.xml', '.png', '.jpg', '.jpeg'}
+IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg'}
 
 
 class ValidationError(Exception):
@@ -32,7 +33,7 @@ def validate_file(file) -> None:
     if ext not in ALLOWED_EXTENSIONS:
         raise ValidationError(
             f"Unsupported file type '{ext}'. Please upload a MusicXML file "
-            f"(.mxl, .musicxml, or .xml)."
+            f"(.mxl, .musicxml, .xml) or a sheet music image (.png, .jpg)."
         )
 
     size = getattr(file, 'size', None)
