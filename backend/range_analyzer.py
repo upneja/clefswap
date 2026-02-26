@@ -5,7 +5,6 @@ playable range, and applies octave shifts to fix them.
 All comparisons use concert (sounding) pitch.
 """
 import copy
-import gc
 from dataclasses import dataclass
 from typing import Literal
 
@@ -97,6 +96,4 @@ def apply_octave_shifts(score, shifts: dict[int, str]):
                     for p in n.pitches:
                         p.midi += semitones
 
-    del score
-    gc.collect()
     return result
