@@ -15,6 +15,7 @@ from pathlib import Path
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
+from starlette.background import BackgroundTask
 
 from backend.clef_map import CLEF_LABELS
 from backend.converter import convert_clef
@@ -129,24 +130,27 @@ async def convert(
             _unlink(converted_tmp)
             upload_tmp = converted_tmp = None
 
+            pdf_path_to_delete = pdf_tmp
+            pdf_tmp = None  # Don't delete in finally
             return FileResponse(
-                path=pdf_tmp,
+                path=pdf_path_to_delete,
                 media_type='application/pdf',
                 filename=f"{output_stem}.pdf",
                 headers={"Content-Disposition": f'attachment; filename="{output_stem}.pdf"'},
+                background=BackgroundTask(_unlink, pdf_path_to_delete),
             )
 
         # Return MusicXML
         _unlink(upload_tmp)
         upload_tmp = None
         resp_path = converted_tmp
-        converted_tmp = None  # Don't clean up — FileResponse needs it
-
+        converted_tmp = None
         return FileResponse(
             path=resp_path,
             media_type='application/xml',
             filename=f"{output_stem}.musicxml",
             headers={"Content-Disposition": f'attachment; filename="{output_stem}.musicxml"'},
+            background=BackgroundTask(_unlink, resp_path),
         )
 
     except Exception as e:

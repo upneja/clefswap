@@ -139,7 +139,9 @@ def test_ties_survive():
     try:
         result = converter.parse(out)
         tied = [n for n in result.flatten().notes if hasattr(n, 'tie') and n.tie is not None]
-        assert len(tied) >= 2
+        assert len(tied) >= 2, "Tied notes were dropped"
+        slurs = list(result.recurse().getElementsByClass('Slur'))
+        assert len(slurs) >= 1, "Slurs were dropped during conversion"
     finally:
         if os.path.exists(out): os.unlink(out)
 

@@ -16,16 +16,6 @@ from backend.clef_map import get_clef_class
 
 logger = logging.getLogger(__name__)
 
-# Configure LilyPond path if present (used later by renderer)
-_LILYPOND_PATH = '/opt/homebrew/bin/lilypond'
-if os.path.exists(_LILYPOND_PATH):
-    try:
-        from music21 import environment as m21env
-        env = m21env.Environment()
-        env['lilypondPath'] = _LILYPOND_PATH
-    except Exception:
-        pass
-
 
 def convert_clef(input_path: str, source_clef: str | None, target_clef: str) -> str:
     """
