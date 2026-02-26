@@ -35,3 +35,8 @@ def test_all_instruments_have_valid_clef():
 def test_all_instruments_have_midi_program():
     for key, inst in INSTRUMENTS.items():
         assert 0 <= inst['midi_program'] <= 127, f"{key} has invalid MIDI program"
+
+def test_get_instrument_returns_copy():
+    inst = get_instrument('violin')
+    inst['name'] = 'MUTATED'
+    assert get_instrument('violin')['name'] == 'Violin'

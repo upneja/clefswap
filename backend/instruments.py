@@ -1,7 +1,9 @@
 """
 Instrument database: name, clef, MIDI program, playable range.
-Range is given as pitch strings music21 can parse (e.g. 'G3', 'E7').
-MIDI program numbers follow General MIDI specification.
+
+All range values (range_low, range_high) represent concert (sounding) pitch
+as pitch strings that music21 can parse (e.g. 'G3', 'E7').
+MIDI program numbers follow General MIDI 0-indexed specification.
 """
 
 INSTRUMENTS = {
@@ -85,4 +87,4 @@ class InstrumentNotFound(Exception):
 def get_instrument(key: str) -> dict:
     if key not in INSTRUMENTS:
         raise InstrumentNotFound(f"Unknown instrument: '{key}'. Valid: {list(INSTRUMENTS.keys())}")
-    return INSTRUMENTS[key]
+    return dict(INSTRUMENTS[key])  # shallow copy prevents external mutation
