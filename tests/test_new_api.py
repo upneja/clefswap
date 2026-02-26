@@ -142,3 +142,17 @@ def test_finalize_applies_shifts():
         json={"session_id": session_id, "shifts": {"1": "shift_down"}, "format": "musicxml"},
     )
     assert final.status_code == 200
+
+
+def test_session_midi_path_traversal_rejected():
+    """Filenames with path traversal characters must be rejected."""
+    content = fixture_bytes("basic_treble_scale.musicxml")
+    resp = client.post(
+        "/convert-instrument",
+        data={"source_instrument": "violin", "target_instrument": "viola"},
+        files={"file": ("test.musicxml", io.BytesIO(content), "text/xml")},
+    )
+    session_id = resp.json()['session_id']
+    # Try path traversal
+    bad_resp = client.get(f"/session/{session_id}/midi/../../etc/passwd")
+    assert bad_resp.status_code in (400, 404)

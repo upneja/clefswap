@@ -135,8 +135,8 @@ function App() {
       setError(`Unsupported type .${ext}. Use MusicXML (.mxl, .musicxml) or image (.png, .jpg).`);
       setStatus('error'); return;
     }
-    if (f.size > 20*1024*1024) {
-      setError('File too large. Max 20MB.'); setStatus('error'); return;
+    if (f.size > 10*1024*1024) {
+      setError('File too large. Max 10MB.'); setStatus('error'); return;
     }
     setFile(f); setStatus('ready'); setError('');
     setDlPdfUrl(null); setDlMxlUrl(null); setFullMidiUrl(null);
@@ -176,29 +176,38 @@ function App() {
   };
 
   const doFinalize = async (sid, approvedShifts) => {
+    let gotDownload = false;
+
+    // Try PDF first
     try {
-      const pdfResp = await fetch(`${API}/finalize`, {
+      const resp = await fetch(`${API}/finalize`, {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({session_id: sid, shifts: approvedShifts, format: 'pdf'}),
       });
-      if (pdfResp.ok) {
-        const blob = await pdfResp.blob();
+      if (resp.ok) {
+        const blob = await resp.blob();
         setDlPdfUrl(URL.createObjectURL(blob));
+        gotDownload = true;
+      } else if (resp.status === 503) {
+        // PDF renderer unavailable — fall through to MusicXML
       }
-    } catch (e) { /* PDF optional */ }
+    } catch (e) { /* try MXL */ }
 
-    try {
-      const mxlResp = await fetch(`${API}/finalize`, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({session_id: sid, shifts: approvedShifts, format: 'musicxml'}),
-      });
-      if (mxlResp.ok) {
-        const blob = await mxlResp.blob();
-        setDlMxlUrl(URL.createObjectURL(blob));
-      }
-    } catch (e) { /* MXL optional */ }
+    // If PDF failed, get MusicXML (session still exists if PDF call failed)
+    if (!gotDownload) {
+      try {
+        const resp = await fetch(`${API}/finalize`, {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({session_id: sid, shifts: approvedShifts, format: 'musicxml'}),
+        });
+        if (resp.ok) {
+          const blob = await resp.blob();
+          setDlMxlUrl(URL.createObjectURL(blob));
+        }
+      } catch (e) { /* optional */ }
+    }
 
     setStatus('done');
   };
@@ -301,7 +310,7 @@ function App() {
               ) : (
                 <div className="space-y-2">
                   <p className="text-sm" style={{color:'rgba(250,248,240,0.5)'}}>Drop sheet music here or click to browse</p>
-                  <p className="text-xs" style={{color:'rgba(250,248,240,0.3)'}}>PNG, JPG, MusicXML (.mxl, .musicxml) — max 20MB</p>
+                  <p className="text-xs" style={{color:'rgba(250,248,240,0.3)'}}>PNG, JPG, MusicXML (.mxl, .musicxml) — max 10MB</p>
                 </div>
               )}
             </div>

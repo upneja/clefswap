@@ -22,8 +22,8 @@ def validate_file(file) -> None:
 
     if ext == '.pdf':
         raise ValidationError(
-            "PDF and image files are not supported. Please export your score "
-            "as MusicXML (.mxl or .musicxml) from your notation software."
+            "PDF files are not supported. Please upload a MusicXML file "
+            "(.mxl, .musicxml, .xml) or a sheet music image (.png, .jpg)."
         )
     if ext in ('.mid', '.midi'):
         raise ValidationError(

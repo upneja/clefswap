@@ -322,19 +322,33 @@ async def convert_instrument(
         delete_session(session_id)
         return JSONResponse(status_code=500, content={"error": "Internal server error."})
     finally:
+        import shutil as _shutil2
         _unlink(upload_tmp)
         if musicxml_path and musicxml_path != upload_tmp:
+            omr_dir = os.path.dirname(musicxml_path)
             _unlink(musicxml_path)
+            # Clean up entire OMR output dir (created by run_omr)
+            if os.path.basename(omr_dir).startswith('clefswap_omr_'):
+                _shutil2.rmtree(omr_dir, ignore_errors=True)
 
 
 @app.get("/session/{session_id}/midi/{filename}")
 def get_session_midi(session_id: str, filename: str):
     """Serve a MIDI file from a session's temp directory."""
+    import re
     session = get_session(session_id)
     if not session:
         return JSONResponse(status_code=404, content={"error": "Session not found or expired."})
 
-    midi_path = os.path.join(session['dir'], f"{filename}.mid")
+    # Whitelist valid filenames (only server-generated names allowed)
+    if not re.match(r'^[a-zA-Z0-9_]+$', filename):
+        return JSONResponse(status_code=400, content={"error": "Invalid filename."})
+
+    midi_path = os.path.realpath(os.path.join(session['dir'], f"{filename}.mid"))
+    session_dir = os.path.realpath(session['dir'])
+    if not midi_path.startswith(session_dir + os.sep):
+        return JSONResponse(status_code=400, content={"error": "Invalid filename."})
+
     if not os.path.exists(midi_path):
         return JSONResponse(status_code=404, content={"error": f"MIDI file not found: {filename}"})
 
@@ -367,7 +381,10 @@ async def finalize(req: FinalizeRequest):
         score = m21conv.parse(xml_path)
 
         # Apply approved shifts (JSON keys come in as strings)
-        shifts = {int(k): v for k, v in req.shifts.items()}
+        try:
+            shifts = {int(k): v for k, v in req.shifts.items()}
+        except (ValueError, TypeError):
+            return JSONResponse(status_code=400, content={"error": "Shift keys must be integer measure numbers."})
         if shifts:
             score = apply_octave_shifts(score, shifts)
 
@@ -407,6 +424,7 @@ async def finalize(req: FinalizeRequest):
 
     except Exception as e:
         logger.exception("Error in /finalize")
+        delete_session(req.session_id)
         return JSONResponse(status_code=500, content={"error": f"Finalize failed: {str(e)[:200]}"})
 
 

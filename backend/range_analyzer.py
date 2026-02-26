@@ -88,7 +88,12 @@ def apply_octave_shifts(score, shifts: dict[int, str]):
             direction = shifts.get(measure.number)
             if not direction:
                 continue
-            semitones = -12 if direction == 'shift_down' else 12
+            if direction == 'shift_down':
+                semitones = -12
+            elif direction == 'shift_up':
+                semitones = 12
+            else:
+                raise ValueError(f"Unknown shift direction: {direction!r}. Must be 'shift_up' or 'shift_down'.")
             for n in measure.flatten().notes:
                 if isinstance(n, m21note.Note):
                     n.pitch.midi += semitones
