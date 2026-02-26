@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClefSwap — Convert Sheet Music Between Clefs</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --navy: #1a1a2e;
+      --gold: #e2b714;
+      --gold-dark: #c9a010;
+      --cream: #faf8f0;
+    }
+    body { background: var(--navy); font-family: 'Inter', sans-serif; color: var(--cream); margin: 0; }
+    h1 { font-family: 'Playfair Display', serif; }
+
+    .drop-zone {
+      border: 2px dashed rgba(226,183,20,0.4);
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .drop-zone.over {
+      border-color: var(--gold);
+      background: rgba(226,183,20,0.06);
+    }
+    .btn-gold {
+      background: var(--gold);
+      color: var(--navy);
+      font-weight: 600;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .btn-gold:hover:not(:disabled) { background: var(--gold-dark); }
+    .btn-gold:active:not(:disabled) { transform: scale(0.98); }
+    .btn-gold:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-outline {
+      border: 1.5px solid rgba(226,183,20,0.4);
+      color: var(--gold);
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .btn-outline:hover:not(:disabled) { border-color: var(--gold); background: rgba(226,183,20,0.07); }
+    .btn-outline:disabled { opacity: 0.4; cursor: not-allowed; }
+    select {
+      background: rgba(255,255,255,0.05);
+      border: 1.5px solid rgba(255,255,255,0.12);
+      color: var(--cream);
+    }
+    select:focus { border-color: var(--gold); outline: none; }
+    select option { background: #1a1a2e; }
+    .spinner {
+      width: 24px; height: 24px;
+      border: 3px solid rgba(226,183,20,0.2);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useRef, useCallback, useEffect } = React;
+const API = 'http://localhost:8000';
+
+const CLEF_SYMBOLS = {
+  treble: '𝄞', alto: '𝄡', tenor: '𝄡', bass: '𝄢',
+  treble_8vb: '𝄞₈', treble_8va: '𝄞⁸', bass_8vb: '𝄢₈',
+};
+
+function fmtBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(1) + ' MB';
+}
+
+function App() {
+  const [file, setFile]           = useState(null);
+  const [srcClef, setSrcClef]     = useState('treble');
+  const [tgtClef, setTgtClef]     = useState('alto');
+  const [clefOpts, setClefOpts]   = useState({});
+  const [status, setStatus]       = useState('idle'); // idle | ready | converting | done | error
+  const [error, setError]         = useState('');
+  const [dlUrl, setDlUrl]         = useState(null);
+  const [dlName, setDlName]       = useState('');
+  const [isDragOver, setDragOver] = useState(false);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    fetch(`${API}/clefs`)
+      .then(r => r.json())
+      .then(setClefOpts)
+      .catch(() => setClefOpts({
+        treble:'Treble Clef (G)', alto:'Alto Clef (C3)', tenor:'Tenor Clef (C4)',
+        bass:'Bass Clef (F)', treble_8vb:'Treble 8vb', treble_8va:'Treble 8va', bass_8vb:'Bass 8vb'
+      }));
+  }, []);
+
+  const pick = useCallback((f) => {
+    if (!f) return;
+    const ext = f.name.split('.').pop().toLowerCase();
+    if (!['mxl','musicxml','xml'].includes(ext)) {
+      setError(`Unsupported file type .${ext}. Please use .mxl or .musicxml.`);
+      setStatus('error'); return;
+    }
+    if (f.size > 10*1024*1024) {
+      setError('File too large. Maximum is 10MB.');
+      setStatus('error'); return;
+    }
+    setFile(f); setStatus('ready'); setError(''); setDlUrl(null);
+  }, []);
+
+  const onDrop = useCallback((e) => {
+    e.preventDefault(); setDragOver(false);
+    pick(e.dataTransfer.files[0]);
+  }, [pick]);
+
+  const convert = async (fmt) => {
+    if (!file) return;
+    setStatus('converting'); setError('');
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('source_clef', srcClef);
+    fd.append('target_clef', tgtClef);
+    fd.append('format', fmt);
+    try {
+      const resp = await fetch(`${API}/convert`, { method: 'POST', body: fd });
+      if (!resp.ok) {
+        const d = await resp.json().catch(() => ({}));
+        throw new Error(d.error || d.detail || `Server error (${resp.status})`);
+      }
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const disp = resp.headers.get('content-disposition') || '';
+      const m = disp.match(/filename="?([^"]+)"?/);
+      setDlUrl(url); setDlName(m ? m[1] : `converted.${fmt}`);
+      setStatus('done');
+    } catch (e) {
+      setError(e.message || 'Conversion failed.'); setStatus('error');
+    }
+  };
+
+  const reset = () => {
+    setFile(null); setStatus('idle'); setError(''); setDlUrl(null);
+    if (inputRef.current) inputRef.current.value = '';
+  };
+
+  const keys = Object.keys(clefOpts);
+  const sameClef = srcClef === tgtClef;
+  const canConvert = !!file && !sameClef;
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      {/* Header */}
+      <header className="border-b px-6 py-5" style={{borderColor:'rgba(255,255,255,0.08)', background:'rgba(0,0,0,0.2)'}}>
+        <div className="max-w-xl mx-auto flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold" style={{color:'var(--gold)'}}>ClefSwap</h1>
+            <p className="text-sm mt-0.5" style={{color:'rgba(250,248,240,0.45)'}}>Convert sheet music between clefs instantly.</p>
+          </div>
+          <span className="text-3xl opacity-20">𝄞</span>
+        </div>
+      </header>
+
+      {/* Main */}
+      <main className="flex-1 max-w-xl mx-auto w-full px-6 py-10 space-y-8">
+
+        {/* Upload */}
+        <div
+          className={`drop-zone rounded-2xl p-10 text-center cursor-pointer select-none ${isDragOver ? 'over' : ''}`}
+          onDrop={onDrop}
+          onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onClick={() => inputRef.current?.click()}
+        >
+          <input ref={inputRef} type="file" className="hidden" accept=".mxl,.musicxml,.xml"
+            onChange={e => pick(e.target.files[0])} />
+          {file ? (
+            <div className="space-y-2">
+              <div className="text-4xl">📄</div>
+              <p className="font-semibold" style={{color:'var(--gold)'}}>{file.name}</p>
+              <p className="text-sm" style={{color:'rgba(250,248,240,0.4)'}}>{fmtBytes(file.size)}</p>
+              <button className="text-xs underline mt-1" style={{color:'rgba(250,248,240,0.3)'}}
+                onClick={e => { e.stopPropagation(); reset(); }}>Remove</button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="text-5xl opacity-30">𝄞</div>
+              <div>
+                <p className="text-lg font-medium" style={{color:'rgba(250,248,240,0.8)'}}>Drop your MusicXML file here</p>
+                <p className="text-sm mt-1" style={{color:'rgba(250,248,240,0.35)'}}>
+                  .mxl · .musicxml · .xml · up to 10MB
+                </p>
+              </div>
+              <button className="btn-gold px-5 py-2 rounded-lg text-sm" onClick={e => e.stopPropagation()}>
+                Choose file
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Clef selectors */}
+        <div>
+          <p className="text-xs uppercase tracking-widest mb-3" style={{color:'rgba(250,248,240,0.35)'}}>Clef Conversion</p>
+          <div className="flex items-center gap-4">
+            <div className="flex-1 space-y-1">
+              <label className="text-xs" style={{color:'rgba(250,248,240,0.4)'}}>From</label>
+              <select value={srcClef} onChange={e => setSrcClef(e.target.value)}
+                className="w-full rounded-lg px-3 py-2.5 text-sm">
+                {keys.map(k => <option key={k} value={k}>{CLEF_SYMBOLS[k]||'𝄡'} {clefOpts[k]}</option>)}
+              </select>
+            </div>
+            <span className="text-xl mt-5" style={{color:'rgba(250,248,240,0.2)'}}>→</span>
+            <div className="flex-1 space-y-1">
+              <label className="text-xs" style={{color:'rgba(250,248,240,0.4)'}}>To</label>
+              <select value={tgtClef} onChange={e => setTgtClef(e.target.value)}
+                className="w-full rounded-lg px-3 py-2.5 text-sm">
+                {keys.map(k => <option key={k} value={k}>{CLEF_SYMBOLS[k]||'𝄡'} {clefOpts[k]}</option>)}
+              </select>
+            </div>
+          </div>
+          {sameClef && (
+            <p className="text-xs mt-2" style={{color:'#fbbf24'}}>
+              ⚠ Source and target clefs are the same.
+            </p>
+          )}
+        </div>
+
+        {/* Convert buttons */}
+        {status === 'converting' ? (
+          <div className="flex items-center justify-center gap-3 py-4">
+            <div className="spinner"></div>
+            <span style={{color:'rgba(250,248,240,0.5)'}}>Converting your score…</span>
+          </div>
+        ) : (
+          <div className="flex gap-3">
+            <button className="btn-gold flex-1 py-3 rounded-xl text-base" disabled={!canConvert}
+              onClick={() => convert('pdf')}>
+              Convert → Download PDF
+            </button>
+            <button className="btn-outline flex-1 py-3 rounded-xl text-sm" disabled={!canConvert}
+              onClick={() => convert('musicxml')}>
+              Download MusicXML
+            </button>
+          </div>
+        )}
+
+        {/* Error */}
+        {status === 'error' && error && (
+          <div className="rounded-xl p-4 flex gap-3 items-start"
+            style={{background:'rgba(248,113,113,0.1)', border:'1px solid rgba(248,113,113,0.3)', color:'#fca5a5'}}>
+            <span>⚠</span>
+            <div>
+              <p className="text-sm">{error}</p>
+              <button className="text-xs underline mt-2" style={{color:'rgba(252,165,165,0.6)'}} onClick={reset}>
+                Try again
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Success */}
+        {status === 'done' && dlUrl && (
+          <div className="rounded-xl p-6 space-y-4"
+            style={{background:'rgba(226,183,20,0.06)', border:'1.5px solid rgba(226,183,20,0.25)'}}>
+            <div className="flex items-center gap-2">
+              <span style={{color:'#22c55e', fontSize:'1.2rem'}}>✓</span>
+              <p className="font-semibold" style={{color:'var(--gold)'}}>Conversion complete!</p>
+            </div>
+            <p className="text-sm" style={{color:'rgba(250,248,240,0.5)'}}>
+              All pitches preserved. Score re-notated in{' '}
+              <strong style={{color:'rgba(250,248,240,0.8)'}}>{clefOpts[tgtClef] || tgtClef}</strong>.
+            </p>
+            <a href={dlUrl} download={dlName}
+              className="btn-gold inline-block px-6 py-2.5 rounded-lg text-sm text-center no-underline">
+              ↓ {dlName}
+            </a>
+            <div>
+              <button className="text-xs underline" style={{color:'rgba(250,248,240,0.25)'}} onClick={reset}>
+                Convert another file
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Info */}
+        <div className="rounded-xl p-5 space-y-2"
+          style={{background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.06)'}}>
+          <p className="text-xs uppercase tracking-widest" style={{color:'rgba(250,248,240,0.3)'}}>How it works</p>
+          <ul className="text-sm space-y-1 list-disc list-inside" style={{color:'rgba(250,248,240,0.45)'}}>
+            <li>Upload a MusicXML file from MuseScore, Sibelius, or Finale</li>
+            <li>All pitches stay <em>exactly the same</em> — only the notation changes</li>
+            <li>Every dynamic, articulation, slur, and tempo marking is preserved</li>
+            <li>All clefs in the score are converted (including mid-score clef changes)</li>
+          </ul>
+        </div>
+      </main>
+
+      <footer className="border-t px-6 py-4 text-center text-xs"
+        style={{borderColor:'rgba(255,255,255,0.06)', color:'rgba(250,248,240,0.2)'}}>
+        Built for musicians who play multiple instruments.
+      </footer>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
