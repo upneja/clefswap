@@ -47,7 +47,10 @@ def convert_clef(input_path: str, source_clef: str | None, target_clef: str) -> 
     target_clef_class = get_clef_class(target_clef)
     logger.info(f"Converting: {source_clef!r} -> {target_clef!r} in {input_path}")
 
-    score = converter.parse(input_path)
+    try:
+        score = converter.parse(input_path)
+    except Exception as e:
+        raise ValueError(f"Could not parse MusicXML file: {e}") from e
 
     for part in score.parts:
         existing_clefs = list(part.recurse().getElementsByClass('Clef'))
@@ -68,7 +71,11 @@ def convert_clef(input_path: str, source_clef: str | None, target_clef: str) -> 
 
     tmp = tempfile.NamedTemporaryFile(suffix='.musicxml', delete=False, prefix='clefswap_')
     tmp.close()
-    score.write('musicxml', fp=tmp.name)
+    try:
+        score.write('musicxml', fp=tmp.name)
+    except Exception as e:
+        os.unlink(tmp.name)
+        raise RuntimeError(f"Failed to write converted MusicXML: {e}") from e
 
     del score
     gc.collect()
