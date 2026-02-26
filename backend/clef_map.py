@@ -21,7 +21,7 @@ CLEF_LABELS = {
 }
 
 
-def get_clef_class(clef_name: str):
+def get_clef_class(clef_name: str) -> type[m21clef.Clef]:
     """Return the music21 clef class for the given clef name."""
     if clef_name not in CLEF_MAP:
         raise ValueError(f"Unknown clef: '{clef_name}'. Valid options: {list(CLEF_MAP.keys())}")
