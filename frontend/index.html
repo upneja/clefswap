@@ -48,11 +48,17 @@ function fmtBytes(b) {
 }
 
 function MidiPlayer({ src, label }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!ref.current || !src) return;
+    ref.current.setAttribute('src', src);
+    ref.current.setAttribute('sound-font', 'https://storage.googleapis.com/magentadata/js/soundfonts/sgm_plus');
+  }, [src]);
   if (!src) return null;
   return (
     <div className="space-y-1">
       {label && <p className="text-xs" style={{color:'rgba(250,248,240,0.4)'}}>{label}</p>}
-      <midi-player src={src} sound-font="https://storage.googleapis.com/magentadata/js/soundfonts/sgm_plus"></midi-player>
+      <midi-player ref={ref}></midi-player>
     </div>
   );
 }
