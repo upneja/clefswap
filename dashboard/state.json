@@ -1,0 +1,96 @@
+{
+  "project": "ClefSwap",
+  "description": "Sheet music clef conversion web app",
+  "startedAt": "2026-02-26T00:00:00Z",
+  "totalTasks": 10,
+  "tasks": [
+    {
+      "id": 1, "name": "Project Bootstrap",
+      "description": "Directory structure, LilyPond install, Python venv, requirements.txt, git init",
+      "status": "completed", "completedAt": "2026-02-26T00:01:00Z",
+      "notes": "Python 3.13 (music21 requires ≥3.10). LilyPond 2.24.4.",
+      "files": ["backend/__init__.py", "backend/requirements.txt", ".gitignore"]
+    },
+    {
+      "id": 2, "name": "Clef Mapping Configuration",
+      "description": "CLEF_MAP dict, get_clef_class(), CLEF_LABELS for all 7 standard clefs",
+      "status": "completed", "completedAt": "2026-02-26T00:05:00Z",
+      "notes": "10 tests. Parametrized coverage of all 7 clef classes. Return type annotation.",
+      "files": ["backend/clef_map.py", "tests/test_clef_map.py"]
+    },
+    {
+      "id": 3, "name": "Input Validators",
+      "description": "validate_file() for type/size, validate_clef_pair() with user-facing errors",
+      "status": "completed", "completedAt": "2026-02-26T00:10:00Z",
+      "notes": "12 tests. PDF/MIDI/generic/size/same-clef/unknown-clef all covered.",
+      "files": ["backend/validators.py", "tests/test_validators.py"]
+    },
+    {
+      "id": 4, "name": "Core Converter (music21)",
+      "description": "convert_clef() — replace all clefs in score, preserve pitches, temp file output",
+      "status": "completed", "completedAt": "2026-02-26T00:20:00Z",
+      "notes": "14 tests. Fixed metadata.bestTitle round-trip. Temp file cleanup on write failure.",
+      "files": ["backend/converter.py", "tests/test_conversion.py", "tests/fixtures/"]
+    },
+    {
+      "id": 5, "name": "PDF Renderer",
+      "description": "detect_renderer(), render_to_pdf() — LilyPond primary, MuseScore fallback",
+      "status": "completed", "completedAt": "2026-02-26T00:28:00Z",
+      "notes": "5 tests. LilyPond at /opt/homebrew/bin/lilypond. CLI fallback implemented.",
+      "files": ["backend/renderer.py", "tests/test_renderer.py"]
+    },
+    {
+      "id": 6, "name": "FastAPI Backend",
+      "description": "GET /health, GET /clefs, POST /convert — CORS, error handling, temp file cleanup",
+      "status": "completed", "completedAt": "2026-02-26T00:38:00Z",
+      "notes": "11 tests. BackgroundTask cleanup for FileResponse. _FileMeta for UploadFile.size.",
+      "files": ["backend/main.py", "tests/test_api.py", "pytest.ini"]
+    },
+    {
+      "id": 7, "name": "Frontend React App",
+      "description": "Single-file index.html — drag-and-drop upload, clef selectors, navy/gold design",
+      "status": "completed", "completedAt": "2026-02-26T00:45:00Z",
+      "notes": "314 lines. React 18 + Tailwind CDN. All 5 states: idle/ready/converting/done/error.",
+      "files": ["frontend/index.html"]
+    },
+    {
+      "id": 8, "name": "Edge Case Hardening",
+      "description": ".mxl format, multi-part scores, empty measures, bad file types, size limits",
+      "status": "completed", "completedAt": "2026-02-26T00:55:00Z",
+      "notes": "7 tests. .mxl ZIP parsing, multi-part conversion, rest preservation, API rejection.",
+      "files": ["tests/test_edge_cases.py"]
+    },
+    {
+      "id": 9, "name": "Integration Tests & Run Script",
+      "description": "Roundtrip parametrized tests (treble→alto/bass/tenor), run.sh startup script",
+      "status": "completed", "completedAt": "2026-02-26T01:00:00Z",
+      "notes": "5 tests. Fixed music21 BytesIO format detection with parseData(). run.sh executable.",
+      "files": ["tests/test_integration.py", "run.sh"]
+    },
+    {
+      "id": 10, "name": "README & Final Polish",
+      "description": "README.md with setup, architecture, full test suite pass",
+      "status": "completed", "completedAt": "2026-02-26T01:05:00Z",
+      "notes": "64 tests passing. BackgroundTask cleanup fix. Redundant LilyPond path removed. Slur test added.",
+      "files": ["README.md"]
+    }
+  ],
+  "currentActivity": "✅ Build complete — 64/64 tests passing",
+  "renderer": "lilypond",
+  "log": [
+    {"time": "2026-02-26T00:00:00Z", "level": "info",    "msg": "ClefSwap build started"},
+    {"time": "2026-02-26T00:01:00Z", "level": "success",  "msg": "Task 1 ✅ Bootstrap — Python 3.13 + LilyPond 2.24.4"},
+    {"time": "2026-02-26T00:04:30Z", "level": "success",  "msg": "Task 2 ✅ Clef mapping — 10 tests, all 7 clef classes"},
+    {"time": "2026-02-26T00:07:00Z", "level": "success",  "msg": "Task 3 ✅ Validators — 12 tests"},
+    {"time": "2026-02-26T00:19:00Z", "level": "success",  "msg": "Task 4 ✅ Core converter — 14 tests, 9 fixtures"},
+    {"time": "2026-02-26T00:28:00Z", "level": "success",  "msg": "Task 5 ✅ PDF renderer — 5 tests, LilyPond confirmed"},
+    {"time": "2026-02-26T00:38:00Z", "level": "success",  "msg": "Task 6 ✅ FastAPI backend — 11 tests, 52 total"},
+    {"time": "2026-02-26T00:45:00Z", "level": "success",  "msg": "Task 7 ✅ Frontend — 314-line React app"},
+    {"time": "2026-02-26T00:55:00Z", "level": "success",  "msg": "Task 8 ✅ Edge cases — 7 tests (.mxl, multi-part, rests, limits)"},
+    {"time": "2026-02-26T01:00:00Z", "level": "success",  "msg": "Task 9 ✅ Integration — 5 roundtrip tests, run.sh"},
+    {"time": "2026-02-26T01:05:00Z", "level": "success",  "msg": "Task 10 ✅ README + final polish — 64 tests passing"},
+    {"time": "2026-02-26T01:10:00Z", "level": "agent",   "msg": "Final code review completed"},
+    {"time": "2026-02-26T01:11:00Z", "level": "fix",     "msg": "BackgroundTask temp cleanup, LilyPond path dedup, slur test"},
+    {"time": "2026-02-26T01:12:00Z", "level": "success",  "msg": "🎵 ClefSwap build COMPLETE — 64/64 tests, 13 commits"}
+  ]
+}
