@@ -1,6 +1,6 @@
 # ClefSwap
 
-**Sheet music clef converter with OMR, range analysis, and MIDI playback.**
+**Sheet music clef converter with OMR, range analysis, and MIDI playback.** *(formerly monkeymusic)*
 
 Upload a MusicXML file or a scanned sheet music image — ClefSwap re-notates it for a different instrument, checks whether any notes fall outside the target's playable range, lets you preview each problem measure via in-browser MIDI, and downloads a clean PDF.
 
@@ -120,8 +120,8 @@ target_instrument=viola
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/upneja/monkeymusic.git
-cd monkeymusic
+git clone https://github.com/upneja/clefswap.git
+cd clefswap
 
 # 2. Create and activate a virtual environment
 python3 -m venv .venv
@@ -154,7 +154,7 @@ OMR support requires `oemer`, which is listed in `requirements.txt`. It uses a d
 ## Project Structure
 
 ```
-monkeymusic/
+clefswap/
 ├── backend/
 │   ├── main.py           # FastAPI app and all endpoints
 │   ├── converter.py      # Core clef re-notation (music21)
